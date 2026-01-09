@@ -37,7 +37,7 @@ const TradingSignalSchema = z.object({
 
 const SYSTEM_PROMPT = `Eres un trader especializado en criptomonedas. Analiza el mercado de BTCUSD y genera una señal de trading en formato JSON.
 
-IMPORTANTE: El confidence no solo refleja la dirección del mercado, sino la probabilidad de éxito de la operación teniendo en cuenta divergencias, indicadores inflados (sobrecompra/sobreventa), y señales contradictorias.
+IMPORTANTE: No inventes datos. El confidence no solo refleja la dirección del mercado, sino la probabilidad de éxito de la operación teniendo en cuenta divergencias, indicadores inflados (sobrecompra/sobreventa), el r:r 2:1 (por cada 1 unidad de riesgo espero ganar 2 unidades de beneficio) y señales contradictorias.
 
 Para BUY/SELL: entry_price, stop_loss y take_profit deben ser números positivos.
 Para HOLD: usa 0 para entry_price, stop_loss y take_profit.
@@ -68,7 +68,9 @@ export async function analyzeTradingSignal(toonData: string): Promise<TradingSig
 
 ${toonData}
 
-Con los indicadores que te he proporcionado, determina la dirección del mercado y encuentra el mejor precio de entrada. Tus reglas de salida son para TP atr x${ATR_CONFIG.MULTIPLIER_TP} y para SL atr x${ATR_CONFIG.MULTIPLIER_SL}. Para finalizar, agrega en el análisis una recomendación clara sobre qué hacer con una operación abierta (ya sea long o short) en función de la dirección detectada y de la señal final (strong buy, buy, hold, sell o strong sell).
+Con los indicadores proporcionados, determina la dirección del mercado y especifica el mejor precio de entrada, explicando claramente la razón de tu decisión.
+Tus reglas de salida son para TP atr x${ATR_CONFIG.MULTIPLIER_TP} y para SL atr x${ATR_CONFIG.MULTIPLIER_SL}. Ten en cuenta que trabajamos con un r:r 2:1, por lo que la operación debe mostrar una probabilidad razonable de alcanzar el TP según las condiciones actuales del mercado.
+Finalmente, incluye una recomendación clara sobre qué hacer con una operación abierta (long o short), basándote en la dirección detectada y en la señal final (strong buy, buy, hold, sell o strong sell).
 `
       },
     ],
