@@ -3,12 +3,12 @@
  * For frontend constants, see lib/constants.ts
  */
 
-// AI Configuration (Cerebras z.ai-glm-4.6)
+// AI Configuration (Cerebras z.ai-glm-4.7)
 export const AI_CONFIG = {
   TEMPERATURE: 1,
   MAX_TOKENS: 10000,
   MIN_RR_RATIO: 3.0,
-  MODEL: 'zai-glm-4.6',
+  MODEL: 'zai-glm-4.7',
 } as const;
 
 // ATR Multipliers for price calculation (used by AI)
@@ -41,7 +41,7 @@ export const TRADING_CONFIG = {
   COIN_SUFFIX: '-PERP',
 
   // Auto-trading configuration
-  AUTO_TRADE_ENABLED: true,  // Set to false to disable auto-trading
+  AUTO_TRADE_ENABLED: false,  // Set to false to disable auto-trading
   MIN_CONFIDENCE_TO_TRADE: 70,  // Only trade signals with confidence >= x0%
 
   // Risk Management (Position Sizing)
