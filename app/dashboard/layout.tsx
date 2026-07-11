@@ -23,14 +23,10 @@ export default function DashboardLayout({
   const getBreadcrumbs = () => {
     const segments = pathname.split('/').filter(Boolean)
 
-    if (segments.length === 0) {
-      return [{ label: "Signals", href: "/" }]
-    }
+    const breadcrumbs = [{ label: "Signals", href: "/dashboard" }]
 
-    const breadcrumbs = [{ label: "Signals", href: "/" }]
-
-    if (segments[0] === "signals" && segments[1] === "bitcoin") {
-      breadcrumbs.push({ label: "Bitcoin", href: "/signals/bitcoin" })
+    if (segments[1] === "signals" && segments[2] === "bitcoin") {
+      breadcrumbs.push({ label: "Bitcoin", href: "/dashboard/signals/bitcoin" })
     }
 
     return breadcrumbs

@@ -42,14 +42,14 @@ type NavItem = NavItemWithSubmenu | NavItemSimple
 const navItems: NavItem[] = [
   {
     title: "Signals",
-    href: "/",
+    href: "/dashboard",
     icon: Activity,
     badge: null,
     disabled: false,
     submenu: [
       {
         title: "Bitcoin",
-        href: "/signals/bitcoin",
+        href: "/dashboard/signals/bitcoin",
         symbol: "BTCUSDC",
       },
     ],
@@ -81,7 +81,7 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <Link href="/" className="flex items-center gap-3 px-4 py-6">
+        <Link href="/dashboard" className="flex items-center gap-3 px-4 py-6">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <span className="text-lg font-bold text-primary-foreground">A</span>
           </div>
