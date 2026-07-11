@@ -28,9 +28,9 @@ const howItWorks = [
 ]
 
 const pricingPlans = [
-  { name: "Free", description: "Acceso limitado a señales", highlight: false },
-  { name: "Pro", description: "Más señales y símbolos", highlight: true },
-  { name: "Team", description: "Uso compartido en equipo", highlight: false },
+  { name: "Free", description: "Acceso limitado a señales", available: true },
+  { name: "Pro", description: "Más señales y símbolos", available: false },
+  { name: "Team", description: "Uso compartido en equipo", available: false },
 ]
 
 export default function LandingPage() {
@@ -83,18 +83,26 @@ export default function LandingPage() {
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           {pricingPlans.map((plan) => (
-            <Card key={plan.name} className="opacity-60">
+            <Card key={plan.name} className={plan.available ? undefined : "opacity-60"}>
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <CardTitle>{plan.name}</CardTitle>
-                  {plan.highlight && <Badge variant="secondary">Próximamente</Badge>}
+                  <Badge variant={plan.available ? "success" : "secondary"}>
+                    {plan.available ? "Disponible" : "Próximamente"}
+                  </Badge>
                 </div>
                 <CardDescription>{plan.description}</CardDescription>
               </CardHeader>
               <CardContent>
-                <Button variant="outline" disabled className="w-full">
-                  No disponible aún
-                </Button>
+                {plan.available ? (
+                  <Button asChild className="w-full">
+                    <Link href="/dashboard">Empezar gratis</Link>
+                  </Button>
+                ) : (
+                  <Button variant="outline" disabled className="w-full">
+                    No disponible aún
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}
