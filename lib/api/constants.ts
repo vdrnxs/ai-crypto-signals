@@ -32,21 +32,3 @@ export const API_LIMITS = {
 
 // Supported Intervals
 export const SUPPORTED_INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d'] as const;
-
-// Trading Configuration
-export const TRADING_CONFIG = {
-  SLIPPAGE_BUY: 1.005,  // 0.5% slippage for buy orders
-  SLIPPAGE_SELL: 0.995, // 0.5% slippage for sell orders
-  DEFAULT_LEVERAGE: 1,
-  COIN_SUFFIX: '-PERP',
-
-  // Auto-trading configuration
-  AUTO_TRADE_ENABLED: false,  // Set to false to disable auto-trading
-  MIN_CONFIDENCE_TO_TRADE: 70,  // Only trade signals with confidence >= x0%
-
-  // Risk Management (Position Sizing)
-  RISK_PERCENTAGE: 2,  // Risk 2% of account balance per trade (max loss if SL hits)
-  MAX_POSITION_PERCENTAGE: 10,  // Maximum 10% of balance per position (not 95%!)
-  MIN_POSITION_VALUE_USD: 10,  // Minimum $10 position (Hyperliquid requirement)
-  MIN_POSITION_SIZE_BTC: 0.001,  // Minimum 0.001 BTC (fallback)
-} as const;

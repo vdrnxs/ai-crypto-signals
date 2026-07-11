@@ -6,7 +6,6 @@ import { prepareAIPayload } from '@/lib/api/toon';
 import { analyzeTradingSignal } from '@/lib/api/ai';
 import { SUPPORTED_INTERVALS, API_LIMITS } from '@/lib/api/constants';
 import { createLogger } from '@/lib/api/logger';
-import { executeAutoTrade } from '@/lib/api/auto-trader';
 
 const log = createLogger('analyze-signals');
 
@@ -27,6 +26,7 @@ const CRON_SECRET = process.env.CRON_SECRET;
  * 6. Parse AI response (signal, SL, TP)
  * 7. Save to btc_trading_signals table
  */
+
 
 // Zod schema for runtime validation of API request
 const AnalyzeRequestSchema = z.object({
@@ -201,10 +201,6 @@ export async function POST(request: NextRequest) {
 
     log.info('Technical indicators saved successfully');
 
-    // Step 7: Execute trade automatically if enabled and signal meets criteria
-    log.info('Step 7: Evaluating auto-trade conditions');
-    const tradeResult = await executeAutoTrade({ symbol, aiSignal });
-
     const processingTime = Date.now() - startTime;
 
     log.info('Analysis completed successfully', { processingTime });
@@ -224,7 +220,6 @@ export async function POST(request: NextRequest) {
         reasoning: aiSignal.reasoning,
         candles_timestamp: latestCandle.open_time,
       },
-      trade: tradeResult,
       metadata: {
         candles_analyzed: candles.length,
         processing_time_ms: processingTime,
