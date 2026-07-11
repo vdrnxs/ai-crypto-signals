@@ -54,3 +54,29 @@ export interface TradingSignal {
   toon_data?: string | null;
   indicators_data?: Record<string, unknown> | null;
 }
+
+export interface TechnicalIndicators {
+  id: number;
+  signal_id: number;
+  price: number;
+  sma_21: number;
+  sma_50: number;
+  sma_100: number;
+  ema_12: number;
+  ema_21: number;
+  ema_55: number;
+  rsi_14: number;
+  rsi_21: number;
+  macd_line: number;
+  macd_signal: number;
+  macd_histogram: number;
+  bb_upper: number;
+  bb_middle: number;
+  bb_lower: number;
+  atr: number;
+  psar_value: number;
+  psar_trend: number;
+  stoch_k: number;
+  stoch_d: number;
+  created_at: string;
+}

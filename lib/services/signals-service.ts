@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase/client'
-import { TradingSignal } from '@/types/database'
+import { TradingSignal, TechnicalIndicators } from '@/types/database'
 
 export async function getLatestSignal(
   symbol: string = 'BTC',
@@ -41,6 +41,23 @@ export async function getSignalHistory(
   }
 
   return (data as TradingSignal[]) || []
+}
+
+export async function getIndicatorsForSignal(
+  signalId: number
+): Promise<TechnicalIndicators | null> {
+  const { data, error } = await supabase
+    .from('btc_indicators')
+    .select('*')
+    .eq('signal_id', signalId)
+    .single()
+
+  if (error) {
+    console.error('[SignalsService] Error fetching indicators:', error)
+    return null
+  }
+
+  return data as TechnicalIndicators
 }
 
 export async function getSignalStats(
