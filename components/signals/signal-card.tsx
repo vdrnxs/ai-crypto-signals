@@ -7,6 +7,7 @@ import { formatPrice, formatDateTime } from "@/lib/utils/formatters"
 import { TrendingUp, TrendingDown, Minus, Clock } from "lucide-react"
 import { TokenBTC, TokenETH, TokenSOL } from "@web3icons/react"
 import { cn } from "@/lib/utils"
+import { useCountUp } from "@/lib/hooks/use-count-up"
 
 interface SignalCardProps {
   signal: TradingSignal
@@ -21,6 +22,10 @@ export function SignalCard({ signal }: SignalCardProps) {
   const entryPrice = signal.entry_price || 0
   const tpPrice = signal.take_profit || 0
   const slPrice = signal.stop_loss || 0
+
+  const animatedEntry = useCountUp(entryPrice)
+  const animatedTp = useCountUp(tpPrice)
+  const animatedSl = useCountUp(slPrice)
 
   // For LONG: TP > EP, SL < EP (positive TP%, negative SL%)
   // For SHORT: TP < EP, SL > EP (negative TP%, positive SL%)
@@ -81,19 +86,21 @@ export function SignalCard({ signal }: SignalCardProps) {
   const config = signalConfig[signal.signal]
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="border-b pb-4">
+    <Card className="overflow-hidden shadow-xl">
+      <CardHeader className="border-b pb-5">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-muted p-2.5">
-              <TokenIcon size={20} variant="branded" />
+          <div className="flex items-center gap-4">
+            <div className="rounded-xl bg-muted p-3">
+              <TokenIcon size={28} variant="branded" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold">{signal.symbol}</h3>
-                <Badge variant={config.variant}>{config.label}</Badge>
+              <div className="flex items-center gap-2.5">
+                <h3 className="text-2xl font-bold tracking-tight">
+                  {signal.symbol}
+                </h3>
+                <Badge variant={config.variant} className="text-xs">{config.label}</Badge>
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
                 <Clock className="h-3 w-3" />
                 <span>{formatDateTime(signal.created_at)}</span>
               </div>
@@ -116,7 +123,7 @@ export function SignalCard({ signal }: SignalCardProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="pt-4">
+      <CardContent className="pt-6">
         <div className="grid gap-4">
           {/* Price Levels - Trading Terminal Style */}
           {!isHold && (
@@ -133,8 +140,8 @@ export function SignalCard({ signal }: SignalCardProps) {
                         SL
                       </div>
                     </div>
-                    <div className="font-mono text-4xl font-bold tracking-tight text-red-600">
-                      {formatPrice(signal.stop_loss)}
+                    <div className="font-mono text-4xl font-bold tracking-tight text-red-600 tabular-nums">
+                      {formatPrice(animatedSl)}
                     </div>
                     <div className="mt-2 text-lg font-bold text-red-600">
                       {slPercentage.toFixed(2)}%
@@ -147,8 +154,8 @@ export function SignalCard({ signal }: SignalCardProps) {
                         TP
                       </div>
                     </div>
-                    <div className="font-mono text-4xl font-bold tracking-tight text-green-600">
-                      {formatPrice(signal.take_profit)}
+                    <div className="font-mono text-4xl font-bold tracking-tight text-green-600 tabular-nums">
+                      {formatPrice(animatedTp)}
                     </div>
                     <div className="mt-2 text-lg font-bold text-green-600">
                       {tpPercentage.toFixed(2)}%
@@ -163,8 +170,8 @@ export function SignalCard({ signal }: SignalCardProps) {
                     <div className="mb-3 flex items-center justify-center">
                       <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Entry Price</div>
                     </div>
-                    <div className="font-mono text-5xl font-bold tracking-tight text-primary">
-                      {formatPrice(signal.entry_price)}
+                    <div className="font-mono text-5xl font-bold tracking-tight text-primary tabular-nums">
+                      {formatPrice(animatedEntry)}
                     </div>
                     {!isHold && (
                       <div className="mt-3 flex items-center justify-center">
@@ -184,8 +191,8 @@ export function SignalCard({ signal }: SignalCardProps) {
                         TP
                       </div>
                     </div>
-                    <div className="font-mono text-4xl font-bold tracking-tight text-green-600">
-                      {formatPrice(signal.take_profit)}
+                    <div className="font-mono text-4xl font-bold tracking-tight text-green-600 tabular-nums">
+                      {formatPrice(animatedTp)}
                     </div>
                     <div className="mt-2 text-lg font-bold text-green-600">
                       +{Math.abs(tpPercentage).toFixed(2)}%
@@ -198,8 +205,8 @@ export function SignalCard({ signal }: SignalCardProps) {
                         SL
                       </div>
                     </div>
-                    <div className="font-mono text-4xl font-bold tracking-tight text-red-600">
-                      {formatPrice(signal.stop_loss)}
+                    <div className="font-mono text-4xl font-bold tracking-tight text-red-600 tabular-nums">
+                      {formatPrice(animatedSl)}
                     </div>
                     <div className="mt-2 text-lg font-bold text-red-600">
                       +{Math.abs(slPercentage).toFixed(2)}%
