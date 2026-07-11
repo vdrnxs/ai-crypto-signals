@@ -12,6 +12,9 @@ const log = createLogger('analyze-signals');
 // Singleton: Read CRON_SECRET once at module load time
 const CRON_SECRET = process.env.CRON_SECRET;
 
+// Minimum time between manually-triggered signal generations, per symbol/interval
+const MANUAL_GENERATION_COOLDOWN_MS = 30 * 60 * 1000;
+
 /**
  * API Endpoint: POST /api/analyze-signals
  *
@@ -70,6 +73,37 @@ export async function POST(request: NextRequest) {
     }
 
     const { symbol, interval, limit } = parseResult.data;
+
+    // Cooldown: manual (non-cron) requests are rate-limited per symbol/interval,
+    // based on the last signal actually saved to the database
+    const isCronRequest = Boolean(CRON_SECRET) && providedSecret === CRON_SECRET;
+
+    if (!isCronRequest) {
+      const { data: lastSignal } = await supabaseServer
+        .from('btc_trading_signals')
+        .select('created_at')
+        .eq('symbol', symbol)
+        .eq('interval', interval)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (lastSignal) {
+        const elapsedMs = Date.now() - new Date(lastSignal.created_at).getTime();
+
+        if (elapsedMs < MANUAL_GENERATION_COOLDOWN_MS) {
+          const retryAfterSeconds = Math.ceil((MANUAL_GENERATION_COOLDOWN_MS - elapsedMs) / 1000);
+          log.warn('Manual generation rejected: cooldown active', { symbol, interval, retryAfterSeconds });
+          return NextResponse.json(
+            {
+              error: 'Cooldown active. Please wait before generating a new signal.',
+              retry_after_seconds: retryAfterSeconds,
+            },
+            { status: 429, headers: { 'Retry-After': String(retryAfterSeconds) } }
+          );
+        }
+      }
+    }
 
     log.info('Starting analysis', { symbol, interval, limit });
 
