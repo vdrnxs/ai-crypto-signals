@@ -66,10 +66,10 @@ const navItems: NavItem[] = [
 const settingsItems: NavItemSimple[] = [
   {
     title: "Settings",
-    href: "#",
+    href: "/dashboard/settings",
     icon: Settings,
-    badge: "WIP",
-    disabled: true,
+    badge: null,
+    disabled: false,
   },
 ]
 
