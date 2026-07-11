@@ -9,3 +9,6 @@ export const RISK_MANAGEMENT = {
   MAX_RR_RATIO: 100, // Maximum R:R ratio before considering data invalid
   FAVORABLE_RR_THRESHOLD: 2, // Minimum R:R to be considered "favorable"
 } as const;
+
+// Timeframes gated behind the Pro plan (UI-only lock, no billing/auth wired yet)
+export const PRO_ONLY_INTERVALS = ['1h', '1d'] as const;
