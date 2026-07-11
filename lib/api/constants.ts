@@ -6,7 +6,7 @@
 // AI Configuration (Cerebras z.ai-glm-4.7)
 export const AI_CONFIG = {
   TEMPERATURE: 1,
-  MAX_TOKENS: 10000,
+  MAX_TOKENS: 16000,
   MIN_RR_RATIO: 3.0,
   MODEL: 'zai-glm-4.7',
 } as const;

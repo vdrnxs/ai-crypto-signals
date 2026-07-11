@@ -89,8 +89,13 @@ Tus reglas de salida son para TP atr x${ATR_CONFIG.MULTIPLIER_TP} y para SL atr 
     content?: string;
     reasoning?: string;
   } | undefined;
-  const content = messageObj?.message || messageObj?.content || messageObj?.reasoning;
+  const content = messageObj?.message || messageObj?.content;
   const finishReason = (response as { choices?: Array<{ finish_reason?: string }> })?.choices?.[0]?.finish_reason;
+
+  if (finishReason === 'length') {
+    log.error('Response truncated due to max_tokens limit before reaching final answer', { finishReason });
+    throw new Error('AI response was truncated before producing a signal. Try again.');
+  }
 
   if (!content) {
     log.error('Empty response from Cerebras', {
@@ -98,10 +103,6 @@ Tus reglas de salida son para TP atr x${ATR_CONFIG.MULTIPLIER_TP} y para SL atr 
       messageObj: JSON.stringify(messageObj)
     });
     throw new Error('No response from AI provider');
-  }
-
-  if (finishReason === 'length') {
-    log.warn('Response truncated due to max_tokens limit', { finishReason });
   }
 
   log.debug('Raw AI response', { content: content.substring(0, 200) });
