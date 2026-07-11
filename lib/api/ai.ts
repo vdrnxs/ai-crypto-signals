@@ -39,11 +39,14 @@ const SYSTEM_PROMPT = `Eres un trader especializado en criptomonedas. Analiza el
 
 IMPORTANTE: No inventes datos. El confidence no solo refleja la dirección del mercado, sino la probabilidad de éxito de la operación teniendo en cuenta divergencias, indicadores inflados (sobrecompra/sobreventa), el r:r 2:1 (por cada 1 unidad de riesgo espero ganar 2 unidades de beneficio) y señales contradictorias.
 
-Para BUY/SELL: entry_price, stop_loss y take_profit deben ser números positivos.
 Para HOLD: usa 0 para entry_price, stop_loss y take_profit.
 
+Explica claramente la razón de tu decisiones de trading (entry price, tp y sl).
+
+Incluye al final de tu respuesta una recomendación sobre qué hacer con una operación abierta (long o short).
+
 Formato:
-{"signal":"BUY|SELL|HOLD|STRONG_BUY|STRONG_SELL","confidence":0-100,"entry_price":number,"stop_loss":number,"take_profit":number,"reasoning":"Análisis breve (máx 5 frases, en español)"}
+{"signal":"BUY|SELL|HOLD|STRONG_BUY|STRONG_SELL","confidence":0-100,"entry_price":number,"stop_loss":number,"take_profit":number,"reasoning":"Análisis breve + recomendación para operaciones abiertas (en español)"}
 `;
 
 export interface TradingSignal {
@@ -68,9 +71,8 @@ export async function analyzeTradingSignal(toonData: string): Promise<TradingSig
 
 ${toonData}
 
-Con los indicadores proporcionados, determina la dirección del mercado y especifica el mejor precio de entrada, explicando claramente la razón de tu decisión.
+Con los indicadores proporcionados, determina la dirección del mercado y especifica el mejor precio de entrada.
 Tus reglas de salida son para TP atr x${ATR_CONFIG.MULTIPLIER_TP} y para SL atr x${ATR_CONFIG.MULTIPLIER_SL}. Ten en cuenta que trabajamos con un r:r 2:1, por lo que la operación debe mostrar una probabilidad razonable de alcanzar el TP según las condiciones actuales del mercado.
-Finalmente, incluye una recomendación clara sobre qué hacer con una operación abierta (long o short), basándote en la dirección detectada y en la señal final (strong buy, buy, hold, sell o strong sell).
 `
       },
     ],
