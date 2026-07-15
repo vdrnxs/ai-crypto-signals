@@ -1,19 +1,35 @@
-import Cerebras from '@cerebras/cerebras_cloud_sdk';
+import OpenAI from 'openai';
+import { zodResponseFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
-import { AI_CONFIG, ATR_CONFIG, PRICE_VALIDATION } from './constants';
+import { AI_CONFIG, ATR_CONFIG, PRICE_VALIDATION, SYMBOL_METADATA, type SUPPORTED_SYMBOLS } from './constants';
 import { createLogger } from './logger';
+import { config } from '@/lib/config';
 
 const log = createLogger('ai');
 
 // Validate API key is configured
-if (!process.env.CEREBRAS_API_KEY) {
-  throw new Error('CEREBRAS_API_KEY environment variable is not configured');
+if (!config.openai.apiKey) {
+  throw new Error('OPENAI_API_KEY environment variable is not configured');
 }
 
-// Initialize Cerebras client (singleton)
-const cerebras = new Cerebras({
-  apiKey: process.env.CEREBRAS_API_KEY,
+// Initialize OpenAI client (singleton)
+const openai = new OpenAI({
+  apiKey: config.openai.apiKey,
 });
+
+// Model occasionally returns confidence as a 0-1 fraction despite prompt instructions;
+// normalize it back to the 0-100 scale the rest of the app (UI, DB) expects.
+// 0 stays 0; anything in (0, 1] is treated as a fraction; anything above 1 is already 0-100.
+function normalizeConfidence(val: number): number {
+  if (val > 0 && val <= 1) {
+    log.warn('Model returned confidence as a 0-1 fraction despite prompt instructions; normalizing', {
+      original: val,
+      normalized: val * 100,
+    });
+    return val * 100;
+  }
+  return val;
+}
 
 // Zod schema for runtime validation of AI responses
 // HOLD signals can have 0 values for prices (no trade action)
@@ -35,19 +51,17 @@ const TradingSignalSchema = z.object({
   message: 'BUY/SELL signals must have positive entry_price, stop_loss, and take_profit',
 });
 
-const SYSTEM_PROMPT = `Eres un trader especializado en criptomonedas. Analiza el mercado de BTCUSD y genera una señal de trading en formato JSON.
+function buildSystemPrompt(assetLabel: string): string {
+  return `Eres un trader especializado en mercados financieros. Analiza el mercado de ${assetLabel} y genera una señal de trading en formato JSON.
 
-IMPORTANTE: No inventes datos. El confidence no solo refleja la dirección del mercado, sino la probabilidad de éxito de la operación teniendo en cuenta divergencias, indicadores inflados (sobrecompra/sobreventa), el r:r 2:1 (por cada 1 unidad de riesgo espero ganar 2 unidades de beneficio) y señales contradictorias.
+IMPORTANTE: No inventes datos. El campo confidence es un entero de 0 a 100 (nunca un decimal entre 0 y 1, ej. usa 63 y no 0.63). Refleja no solo la dirección del mercado, sino la probabilidad de éxito de la operación teniendo en cuenta divergencias, indicadores inflados (sobrecompra/sobreventa), el r:r 2:1 (por cada 1 unidad de riesgo espero ganar 2 unidades de beneficio) y señales contradictorias.
 
 Para HOLD: usa 0 para entry_price, stop_loss y take_profit.
 
 Explica claramente la razón de tu decisiones de trading (entry price, tp y sl).
 
-Incluye al final de tu respuesta una recomendación sobre qué hacer con una operación abierta (long o short).
-
-Formato:
-{"signal":"BUY|SELL|HOLD|STRONG_BUY|STRONG_SELL","confidence":0-100,"entry_price":number,"stop_loss":number,"take_profit":number,"reasoning":"Análisis breve + recomendación para operaciones abiertas (en español)"}
-`;
+Incluye al final de tu respuesta una recomendación sobre qué hacer con una operación abierta (long o short).`;
+}
 
 export interface TradingSignal {
   signal: 'BUY' | 'SELL' | 'HOLD' | 'STRONG_BUY' | 'STRONG_SELL';
@@ -58,78 +72,78 @@ export interface TradingSignal {
   reasoning: string;
 }
 
-export async function analyzeTradingSignal(toonData: string): Promise<TradingSignal> {
-  log.info('Analyzing market data with Cerebras z.ai-glm-4.6');
+export async function analyzeTradingSignal(
+  toonData: string,
+  symbol: (typeof SUPPORTED_SYMBOLS)[number] = 'BTC'
+): Promise<TradingSignal> {
+  log.info('Analyzing market data with OpenAI', { model: AI_CONFIG.MODEL, symbol });
 
-  const response = await cerebras.chat.completions.create({
-    model: AI_CONFIG.MODEL,
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      {
-        role: 'user',
-        content: `Market data:
+  const assetLabel = SYMBOL_METADATA[symbol].assetLabel;
+
+  let response;
+  try {
+    response = await openai.chat.completions.parse({
+      model: AI_CONFIG.MODEL,
+      messages: [
+        { role: 'system', content: buildSystemPrompt(assetLabel) },
+        {
+          role: 'user',
+          content: `Market data:
 
 ${toonData}
 
 Con los indicadores proporcionados, determina la dirección del mercado y especifica el mejor precio de entrada.
 Tus reglas de salida son para TP atr x${ATR_CONFIG.MULTIPLIER_TP} y para SL atr x${ATR_CONFIG.MULTIPLIER_SL}. Ten en cuenta que trabajamos con un r:r 2:1, por lo que la operación debe mostrar una probabilidad razonable de alcanzar el TP según las condiciones actuales del mercado.
 `
-      },
-    ],
-    temperature: AI_CONFIG.TEMPERATURE,
-    max_completion_tokens: AI_CONFIG.MAX_TOKENS,
-    top_p: 0.95,
-    response_format: { type: "json_object" },
-  });
+        },
+      ],
+      temperature: AI_CONFIG.TEMPERATURE,
+      max_completion_tokens: AI_CONFIG.MAX_TOKENS,
+      response_format: zodResponseFormat(TradingSignalSchema, 'trading_signal'),
+    });
+  } catch (error) {
+    // zodResponseFormat re-validates the raw response against TradingSignalSchema
+    // (including .refine()) inside the SDK call itself, so a schema/business-rule
+    // failure throws a raw ZodError here rather than surfacing as parsed/refusal.
+    log.error('OpenAI request failed or response failed schema validation', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new Error(`AI provider request failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
 
-  // Extract content from response
-  // z.ai-glm-4.6 with response_format puts the JSON in the 'message' field, not 'content'
-  const messageObj = (response as { choices?: Array<{ message?: unknown }> })?.choices?.[0]?.message as {
-    message?: string;
-    content?: string;
-    reasoning?: string;
-  } | undefined;
-  const content = messageObj?.message || messageObj?.content;
-  const finishReason = (response as { choices?: Array<{ finish_reason?: string }> })?.choices?.[0]?.finish_reason;
+  const choice = response.choices[0];
+  const finishReason = choice?.finish_reason;
 
   if (finishReason === 'length') {
     log.error('Response truncated due to max_tokens limit before reaching final answer', { finishReason });
     throw new Error('AI response was truncated before producing a signal. Try again.');
   }
 
-  if (!content) {
-    log.error('Empty response from Cerebras', {
-      response: JSON.stringify(response).substring(0, 500),
-      messageObj: JSON.stringify(messageObj)
+  const parsed = choice?.message?.parsed;
+
+  if (!parsed) {
+    log.error('Empty or unparseable response from OpenAI', {
+      refusal: choice?.message?.refusal,
+      finishReason,
     });
-    throw new Error('No response from AI provider');
+    throw new Error(choice?.message?.refusal || 'No response from AI provider');
   }
 
-  log.debug('Raw AI response', { content: content.substring(0, 200) });
+  log.debug('Parsed AI response', { signal: parsed.signal, confidence: parsed.confidence });
 
-  // Extract JSON from response (model may include text before/after JSON)
-  let jsonString = content.trim();
+  // OpenAI strict structured outputs forces every schema field to be present in the
+  // response, so the model always emits explicit entry/SL/TP values even for HOLD
+  // (Zod's .default(0) never kicks in). Zero them out here regardless of what the
+  // model sent, since a HOLD signal must never carry stray price levels.
+  const isHold = parsed.signal === 'HOLD';
 
-  // Try to find JSON object in the response
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    jsonString = jsonMatch[0];
-  }
-
-  // Parse and validate with Zod (runtime type safety)
-  let parsedContent;
-  try {
-    parsedContent = JSON.parse(jsonString);
-  } catch (error) {
-    log.error('Failed to parse AI response as JSON', {
-      content: content.substring(0, 500),
-      jsonString: jsonString.substring(0, 500),
-      error
-    });
-    throw new Error(`Invalid JSON response from AI: ${content.substring(0, 100)}`);
-  }
-
-  const signal = TradingSignalSchema.parse(parsedContent);
+  const signal: TradingSignal = {
+    ...parsed,
+    confidence: normalizeConfidence(parsed.confidence),
+    entry_price: isHold ? 0 : parsed.entry_price,
+    stop_loss: isHold ? 0 : parsed.stop_loss,
+    take_profit: isHold ? 0 : parsed.take_profit,
+  };
 
   // Additional business logic validation
   validateSignalLogic(signal);

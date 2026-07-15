@@ -3,12 +3,12 @@
  * For frontend constants, see lib/constants.ts
  */
 
-// AI Configuration (Cerebras z.ai-glm-4.7)
+// AI Configuration (OpenAI)
 export const AI_CONFIG = {
-  TEMPERATURE: 1,
-  MAX_TOKENS: 16000,
+  TEMPERATURE: 0.3,
+  MAX_TOKENS: 1500,
   MIN_RR_RATIO: 3.0,
-  MODEL: 'zai-glm-4.7',
+  MODEL: 'gpt-4.1',
 } as const;
 
 // ATR Multipliers for price calculation (used by AI)
@@ -32,3 +32,12 @@ export const API_LIMITS = {
 
 // Supported Intervals
 export const SUPPORTED_INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d'] as const;
+
+// Supported Symbols
+// `symbol` doubles as the Hyperliquid `coin` sent to candleSnapshot - they must match exactly.
+export const SUPPORTED_SYMBOLS = ['BTC', 'PAXG'] as const;
+
+export const SYMBOL_METADATA: Record<(typeof SUPPORTED_SYMBOLS)[number], { label: string; assetLabel: string }> = {
+  BTC: { label: 'Bitcoin', assetLabel: 'BTCUSD' },
+  PAXG: { label: 'Gold', assetLabel: 'PAXGUSD' },
+};
