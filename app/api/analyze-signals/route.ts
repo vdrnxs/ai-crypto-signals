@@ -4,13 +4,15 @@ import { supabaseServer } from '@/lib/supabase/server';
 import { fetchCandles } from '@/lib/api/hyperliquid';
 import { prepareAIPayload } from '@/lib/api/toon';
 import { analyzeTradingSignal } from '@/lib/api/ai';
-import { SUPPORTED_INTERVALS, API_LIMITS } from '@/lib/api/constants';
+import { SUPPORTED_INTERVALS, SUPPORTED_SYMBOLS, API_LIMITS } from '@/lib/api/constants';
 import { createLogger } from '@/lib/api/logger';
+import { config } from '@/lib/config';
+import { handleRouteError } from '@/lib/api/error-handler';
 
 const log = createLogger('analyze-signals');
 
 // Singleton: Read CRON_SECRET once at module load time
-const CRON_SECRET = process.env.CRON_SECRET;
+const CRON_SECRET = config.cronSecret;
 
 // Minimum time between manually-triggered signal generations, per symbol/interval
 const MANUAL_GENERATION_COOLDOWN_MS = 30 * 60 * 1000;
@@ -25,7 +27,7 @@ const MANUAL_GENERATION_COOLDOWN_MS = 30 * 60 * 1000;
  * 2. Save/update candles in Supabase (upsert)
  * 3. Calculate technical indicators
  * 4. Convert to TOON format
- * 5. Send to Cerebras z.ai-glm-4.6 for analysis
+ * 5. Send to OpenAI for analysis
  * 6. Parse AI response (signal, SL, TP)
  * 7. Save to btc_trading_signals table
  */
@@ -33,7 +35,7 @@ const MANUAL_GENERATION_COOLDOWN_MS = 30 * 60 * 1000;
 
 // Zod schema for runtime validation of API request
 const AnalyzeRequestSchema = z.object({
-  symbol: z.enum(['BTC']).default('BTC'),
+  symbol: z.enum(SUPPORTED_SYMBOLS).default('BTC'),
   interval: z.enum(SUPPORTED_INTERVALS).default('4h'),
   limit: z.number()
     .int('Limit must be an integer')
@@ -75,10 +77,11 @@ export async function POST(request: NextRequest) {
     const { symbol, interval, limit } = parseResult.data;
 
     // Cooldown: manual (non-cron) requests are rate-limited per symbol/interval,
-    // based on the last signal actually saved to the database
+    // based on the last signal actually saved to the database.
+    // Skipped entirely outside production so local development isn't rate-limited.
     const isCronRequest = Boolean(CRON_SECRET) && providedSecret === CRON_SECRET;
 
-    if (!isCronRequest) {
+    if (!isCronRequest && process.env.NODE_ENV === 'production') {
       const { data: lastSignal } = await supabaseServer
         .from('btc_trading_signals')
         .select('created_at')
@@ -139,9 +142,9 @@ export async function POST(request: NextRequest) {
     const { toonData, indicators } = prepareAIPayload(candles, symbol, interval, 100);
     log.debug('TOON payload prepared', { length: toonData.length, candlesSent: 100 });
 
-    // Step 4: Call Cerebras AI for analysis
-    log.info('Step 4: Calling Cerebras z.ai-glm-4.6 for analysis');
-    const aiSignal = await analyzeTradingSignal(toonData);
+    // Step 4: Call OpenAI for analysis
+    log.info('Step 4: Calling OpenAI for analysis');
+    const aiSignal = await analyzeTradingSignal(toonData, symbol);
     log.info('AI signal generated', { signal: aiSignal.signal, confidence: aiSignal.confidence });
 
     // Step 5: Save trading signal to database
@@ -262,16 +265,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    log.error('Unhandled error during analysis', error);
-
-    const processingTime = Date.now() - startTime;
-
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        processing_time_ms: processingTime,
-      },
-      { status: 500 }
-    );
+    return handleRouteError(log, error, startTime);
   }
 }
