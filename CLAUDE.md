@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Aurum generates AI-powered cryptocurrency trading signals. It fetches OHLCV candle data from Hyperliquid, calculates technical indicators, sends the data to Cerebras (zai-glm-4.7) for analysis, and stores/displays the resulting BUY/SELL/HOLD signal with confidence, entry/stop-loss/take-profit levels, and AI reasoning.
+Aurum generates AI-powered cryptocurrency trading signals. It fetches OHLCV candle data from Hyperliquid, calculates technical indicators, sends the data to OpenAI (`gpt-4.1`) for analysis, and stores/displays the resulting BUY/SELL/HOLD signal with confidence, entry/stop-loss/take-profit levels, and AI reasoning.
 
 **This project no longer executes trades.** Order placement, position management, and the Hyperliquid SDK trading integration have been removed. Aurum is signal-generation and display only.
 
@@ -13,7 +13,7 @@ Aurum generates AI-powered cryptocurrency trading signals. It fetches OHLCV cand
 - **Framework**: Next.js 15 (App Router + React 19)
 - **Styling**: Tailwind CSS v4, shadcn/ui components
 - **Database**: Supabase (PostgreSQL)
-- **AI**: Cerebras (`zai-glm-4.7` model, via `@cerebras/cerebras_cloud_sdk`)
+- **AI**: OpenAI (`gpt-4.1` model, via `openai` SDK, Structured Outputs with Zod)
 - **Market data**: Hyperliquid public `/info` REST endpoint (candle snapshots only — no auth, no SDK)
 - **Technical indicators**: `indicatorts` (pure TypeScript)
 - **Data format**: TOON (`@toon-format/toon`) — compressed JSON sent to the LLM
@@ -47,7 +47,7 @@ curl -X POST http://localhost:3000/api/analyze-signals \
 ```bash
 curl http://localhost:3000/api/test-pipeline
 ```
-Fetches candles, computes indicators, builds the TOON payload, and returns a mock HOLD signal — useful for verifying Hyperliquid connectivity and indicator math without spending Cerebras credits.
+Fetches candles, computes indicators, builds the TOON payload, and returns a mock HOLD signal — useful for verifying Hyperliquid connectivity and indicator math without spending OpenAI credits.
 
 ## Architecture
 
@@ -58,7 +58,7 @@ Cron (or manual POST) → /api/analyze-signals
   1. fetchCandles()        lib/api/hyperliquid.ts   — POST to Hyperliquid /info (candleSnapshot), Zod-validated
   2. upsert candles        Supabase "candles" table  (onConflict: symbol,interval,open_time)
   3. prepareAIPayload()    lib/api/toon.ts           — computes indicators + encodes TOON payload
-  4. analyzeTradingSignal() lib/api/ai.ts            — Cerebras call, Zod-validated response
+  4. analyzeTradingSignal() lib/api/ai.ts            — OpenAI call, Zod-validated response
   5. insert signal          Supabase "btc_trading_signals" table
   6. insert indicators      Supabase "btc_indicators" table (FK: signal_id)
      → on failure, the signal row is deleted (rollback) to avoid orphaned signals
@@ -70,7 +70,8 @@ The route is protected by an `x-cron-secret` header checked against `CRON_SECRET
 
 - Server Components read signals via `lib/services/signals-service.ts` (`getLatestSignal`, `getSignalHistory`, `getSignalStats`), which queries Supabase through the browser-safe client (`lib/supabase/client.ts`, anon key, read-only under RLS).
 - `lib/supabase/server.ts` uses the service role key and is for API routes only — never imported by client components.
-- The dashboard route group `app/(dashboard)/` shares a sidebar layout (`components/dashboard/app-sidebar.tsx`) via Next.js route groups — the `(dashboard)` folder does not appear in the URL. `/` redirects to `/signals/bitcoin`.
+- `app/dashboard/` shares a sidebar layout (`components/dashboard/app-sidebar.tsx`). `/` redirects to `/dashboard/signals/bitcoin`.
+- Signal pages live under the dynamic route `app/dashboard/signals/[symbol]/page.tsx`, where `[symbol]` is a human-readable slug (`bitcoin`, `gold`, ...) mapped to the actual trading symbol via `SYMBOL_SLUGS`/`SYMBOL_TO_SLUG` in `lib/constants.ts`. Supported symbols and their labels live in `SUPPORTED_SYMBOLS`/`SYMBOL_METADATA` in `lib/api/constants.ts` — add a symbol there plus a slug entry to make it appear in the sidebar and become tradeable.
 
 ### Technical indicators
 
@@ -102,7 +103,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 # Backend only
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
-CEREBRAS_API_KEY=
+OPENAI_API_KEY=
 CRON_SECRET=            # optional; if unset, /api/analyze-signals is unauthenticated
 LOG_LEVEL=INFO           # DEBUG | INFO | WARN | ERROR
 ```
