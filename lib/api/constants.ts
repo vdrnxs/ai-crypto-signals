@@ -5,8 +5,8 @@
 
 // AI Configuration (OpenAI)
 export const AI_CONFIG = {
-  TEMPERATURE: 0.3,
-  MAX_TOKENS: 1500,
+  TEMPERATURE: 0.8,
+  MAX_TOKENS: 3000,
   MIN_RR_RATIO: 3.0,
   MODEL: 'gpt-4.1',
 } as const;
