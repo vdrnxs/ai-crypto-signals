@@ -3,6 +3,7 @@ import { fetchCandles } from '@/lib/api/hyperliquid';
 import { prepareAIPayload } from '@/lib/api/toon';
 import { getLatestValues } from '@/lib/api/indicators';
 import { createLogger } from '@/lib/api/logger';
+import { handleRouteError } from '@/lib/api/error-handler';
 
 const log = createLogger('test-pipeline');
 
@@ -99,17 +100,6 @@ export async function GET(_request: NextRequest) {
     });
 
   } catch (error) {
-    log.error('Test pipeline failed', error);
-
-    const processingTime = Date.now() - startTime;
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        processing_time_ms: processingTime,
-      },
-      { status: 500 }
-    );
+    return handleRouteError(log, error, startTime);
   }
 }

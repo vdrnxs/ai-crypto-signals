@@ -3,6 +3,8 @@
  * Replaces scattered console.log statements with structured logging
  */
 
+import { config } from '@/lib/config';
+
 export enum LogLevel {
   DEBUG = 0,
   INFO = 1,
@@ -24,7 +26,7 @@ class Logger {
   }
 
   private getMinLevelFromEnv(): LogLevel | null {
-    const envLevel = process.env.LOG_LEVEL?.toUpperCase();
+    const envLevel = config.logLevel;
 
     switch (envLevel) {
       case 'DEBUG':
