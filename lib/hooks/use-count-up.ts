@@ -15,25 +15,25 @@ function easeOutExpo(t: number): number {
  */
 export function useCountUp(target: number): number {
   const [value, setValue] = useState(target)
-  const previousTarget = useRef(target)
+  const valueRef = useRef(target)
   const frameRef = useRef<number | null>(null)
 
   useEffect(() => {
-    if (previousTarget.current === target) return
+    if (valueRef.current === target) return
 
-    const from = previousTarget.current
+    const from = valueRef.current
     const startTime = performance.now()
 
     function tick(now: number) {
       const elapsed = now - startTime
       const progress = Math.min(1, elapsed / DURATION_MS)
       const eased = easeOutExpo(progress)
-      setValue(from + (target - from) * eased)
+      const next = from + (target - from) * eased
+      valueRef.current = next
+      setValue(next)
 
       if (progress < 1) {
         frameRef.current = requestAnimationFrame(tick)
-      } else {
-        previousTarget.current = target
       }
     }
 
