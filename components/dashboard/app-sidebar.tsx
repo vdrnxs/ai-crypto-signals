@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/sidebar"
 import { Badge } from "@/components/ui/badge"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { SUPPORTED_SYMBOLS, SYMBOL_METADATA } from "@/lib/api/constants"
+import { SYMBOL_TO_SLUG } from "@/lib/constants"
 
 type NavItemBase = {
   title: string
@@ -46,13 +48,11 @@ const navItems: NavItem[] = [
     icon: Activity,
     badge: null,
     disabled: false,
-    submenu: [
-      {
-        title: "Bitcoin",
-        href: "/dashboard/signals/bitcoin",
-        symbol: "BTCUSDC",
-      },
-    ],
+    submenu: SUPPORTED_SYMBOLS.map((symbol) => ({
+      title: SYMBOL_METADATA[symbol].label,
+      href: `/dashboard/signals/${SYMBOL_TO_SLUG[symbol]}`,
+      symbol,
+    })),
   },
   {
     title: "Analytics",

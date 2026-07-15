@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/breadcrumb"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
+import { SYMBOL_SLUGS } from "@/lib/constants"
+import { SYMBOL_METADATA } from "@/lib/api/constants"
 
 export default function DashboardLayout({
   children,
@@ -25,8 +27,14 @@ export default function DashboardLayout({
 
     const breadcrumbs = [{ label: "Signals", href: "/dashboard" }]
 
-    if (segments[1] === "signals" && segments[2] === "bitcoin") {
-      breadcrumbs.push({ label: "Bitcoin", href: "/dashboard/signals/bitcoin" })
+    if (segments[1] === "signals" && segments[2]) {
+      const symbol = SYMBOL_SLUGS[segments[2]]
+      if (symbol) {
+        breadcrumbs.push({
+          label: SYMBOL_METADATA[symbol].label,
+          href: `/dashboard/signals/${segments[2]}`,
+        })
+      }
     }
 
     return breadcrumbs

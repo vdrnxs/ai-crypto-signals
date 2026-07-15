@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { formatPrice, formatDateTime } from "@/lib/utils/formatters"
 import { TrendingUp, TrendingDown, Minus, Clock, ChevronDown, Sparkles, Gauge } from "lucide-react"
-import { TokenBTC, TokenETH, TokenSOL } from "@web3icons/react"
+import { TokenBTC, TokenETH, TokenSOL, TokenPAXG } from "@web3icons/react"
 import { cn } from "@/lib/utils"
 import { useCountUp } from "@/lib/hooks/use-count-up"
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"
@@ -48,8 +48,9 @@ export function SignalCard({ signal }: SignalCardProps) {
 
   // For LONG: TP > EP, SL < EP (positive TP%, negative SL%)
   // For SHORT: TP < EP, SL > EP (negative TP%, positive SL%)
-  const tpPercentage = entryPrice > 0 ? ((tpPrice - entryPrice) / entryPrice) * 100 : 0
-  const slPercentage = entryPrice > 0 ? ((slPrice - entryPrice) / entryPrice) * 100 : 0
+  // Derived from the animated values so the percentage stays in sync with the price mid-tween.
+  const tpPercentage = animatedEntry > 0 ? ((animatedTp - animatedEntry) / animatedEntry) * 100 : 0
+  const slPercentage = animatedEntry > 0 ? ((animatedSl - animatedEntry) / animatedEntry) * 100 : 0
 
   const riskAmount = Math.abs(entryPrice - slPrice)
   const rewardAmount = Math.abs(tpPrice - entryPrice)
@@ -60,6 +61,7 @@ export function SignalCard({ signal }: SignalCardProps) {
     'BTC': TokenBTC,
     'ETH': TokenETH,
     'SOL': TokenSOL,
+    'PAXG': TokenPAXG,
   }
 
   const TokenIcon = tokenIcons[signal.symbol] || TokenBTC // Fallback to BTC if unknown
